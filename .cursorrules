@@ -1,0 +1,376 @@
+# PR Campaign Ideation System - Cursor Rules
+
+## Project Overview
+You are developing an AI-powered PR campaign ideation system that performs daily trend analysis across multiple platforms and generates campaign ideas for digital PR agencies. The system detects lasting trends (like "White Lotus" trending), analyzes their PR potential over time, and creates actionable campaign angles that brands can execute over several days.
+
+## Tech Stack
+- **Backend**: FastAPI (Python 3.11+), PostgreSQL, Redis, Elasticsearch, Celery Beat (scheduled tasks)
+- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS, Shadcn/ui
+- **AI/ML**: LangChain, OpenAI/Anthropic/OpenRouter APIs, spaCy, Sentence Transformers
+- **Infrastructure**: Docker, Docker Compose, GitHub Actions
+
+## Code Style Guidelines
+
+### Python (Backend)
+- Use Python 3.11+ features (type hints, async/await)
+- Follow PEP 8 with 88-character line limit (Black formatter)
+- Use Pydantic for data validation and serialization
+- Implement comprehensive error handling with custom exceptions
+- Use dependency injection for testability
+- Docstrings for all public functions/classes (Google style)
+
+#### Core Python Best Practices
+1. **Use Meaningful Names**: Choose descriptive variable, function, and class names
+   ```python
+   # Bad: def calc(x, y):
+   # Good: def calculate_trend_score(velocity: float, volume: int) -> float:
+   ```
+
+2. **Follow PEP 8**: Strictly adhere to Python Enhancement Proposal 8
+   - Use snake_case for functions and variables
+   - Use PascalCase for classes
+   - Use UPPER_CASE for constants
+   - 88-character line limit (Black formatter)
+
+3. **Use Docstrings**: Document all functions and classes
+   ```python
+   def detect_trends(source: TrendSource, timeframe: str) -> List[Trend]:
+       """
+       Detect trending topics from specified source.
+       
+       Args:
+           source: Data source for trend detection
+           timeframe: Time window for analysis (e.g., '1h', '24h')
+           
+       Returns:
+           List of Trend objects sorted by score
+           
+       Raises:
+           APIError: If external API call fails
+       """
+   ```
+
+4. **Keep It Simple**: Write simple and clear code
+   - One function, one purpose
+   - Avoid nested complexity (max 3 levels)
+   - Extract complex logic into separate functions
+
+5. **Use List Comprehensions**: When appropriate and readable
+   ```python
+   # Good for simple operations
+   active_trends = [t for t in trends if t.score > threshold]
+   
+   # Use regular loop for complex logic
+   for trend in trends:
+       if complex_validation(trend):
+           process_trend(trend)
+   ```
+
+6. **Handle Exceptions**: Always use try-except blocks for external calls
+   ```python
+   async def fetch_twitter_trends() -> List[Trend]:
+       try:
+           response = await twitter_api.get_trends()
+           return parse_trends(response)
+       except TwitterAPIError as e:
+           logger.error(f"Twitter API failed: {e}")
+           return []  # Graceful degradation
+       except Exception as e:
+           logger.exception("Unexpected error in fetch_twitter_trends")
+           raise
+   ```
+
+7. **Use Virtual Environments**: Always isolate dependencies
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Unix
+   # or
+   venv\Scripts\activate  # Windows
+   pip install -r requirements.txt
+   ```
+
+8. **Write Tests**: Comprehensive test coverage required
+   ```python
+   # tests/test_trend_detection.py
+   async def test_detect_trends_returns_sorted_by_score():
+       trends = await detect_trends(source=MockSource(), timeframe="1h")
+       assert all(trends[i].score >= trends[i+1].score 
+                  for i in range(len(trends)-1))
+   ```
+
+9. **Use Type Hints**: Always specify types for clarity
+   ```python
+   from typing import List, Optional, Dict, Union
+   from datetime import datetime
+   
+   async def analyze_trend(
+       trend_id: str,
+       include_angles: bool = True,
+       client_filter: Optional[List[str]] = None
+   ) -> Dict[str, Union[Trend, List[Angle]]]:
+       """Type hints make code self-documenting."""
+   ```
+
+10. **Avoid Global Variables**: Use dependency injection instead
+    ```python
+    # Bad: 
+    # REDIS_CLIENT = Redis()
+    
+    # Good:
+    class TrendService:
+        def __init__(self, redis_client: Redis):
+            self.redis = redis_client
+    ```
+
+### TypeScript (Frontend)
+- Strict TypeScript configuration
+- Functional components with hooks
+- Custom hooks for business logic
+- Avoid any type - use proper interfaces
+- Co-locate types with components
+- Use Zod for runtime validation
+
+## Project Structure
+
+```
+pr-campaign-system/
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── endpoints/
+│   │   │   │   ├── trends.py
+│   │   │   │   ├── campaigns.py
+│   │   │   │   └── analytics.py
+│   │   │   └── deps.py
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   └── security.py
+│   │   ├── models/
+│   │   │   ├── trend.py
+│   │   │   ├── campaign.py
+│   │   │   └── angle.py
+│   │   ├── services/
+│   │   │   ├── trend_detection/
+│   │   │   ├── angle_generation/
+│   │   │   └── data_enrichment/
+│   │   ├── tasks/
+│   │   │   ├── daily_analysis.py
+│   │   │   ├── trend_scoring.py
+│   │   │   └── digest_email.py
+│   │   └── main.py
+│   ├── tests/
+│   └── requirements.txt
+├── frontend/
+│   ├── app/
+│   │   ├── (dashboard)/
+│   │   ├── api/
+│   │   └── components/
+│   ├── components/
+│   │   ├── ui/
+│   │   └── features/
+│   ├── lib/
+│   │   ├── api/
+│   │   └── utils/
+│   └── types/
+├── docker-compose.yml
+└── .env.example
+```
+
+## Key Patterns & Practices
+
+### API Design
+- RESTful endpoints with consistent naming
+- Use FastAPI's automatic OpenAPI documentation
+- Implement pagination for list endpoints
+- Version APIs (/api/v1/)
+- Return consistent error responses
+
+### Data Flow
+1. Daily scheduled jobs → Fetch data from external APIs
+2. Batch processing → Analyze and score trends
+3. Processed data → PostgreSQL/Elasticsearch
+4. API endpoints → Frontend via React Query
+5. Daily digest emails → Notify users of new opportunities
+
+### Trend Detection Implementation
+```python
+# Daily batch processing for trend analysis
+async def analyze_daily_trends() -> List[TrendData]:
+    """
+    Run comprehensive daily trend analysis.
+    Focuses on trends with staying power rather than momentary spikes.
+    """
+    trends = await collect_trends_from_all_sources()
+    scored_trends = await score_and_filter_trends(trends)
+    # Only keep trends that show sustained interest
+    return [t for t in scored_trends if t.sustainability_score > 0.7]
+
+# Scheduled task
+@celery_app.task
+def daily_trend_analysis():
+    """Runs every morning at 6 AM to prepare daily insights."""
+    asyncio.run(analyze_daily_trends())
+```
+
+### Frontend Components
+```typescript
+// Use typed props with interfaces
+interface TrendCardProps {
+  trend: Trend;
+  onGenerateAngles: (trendId: string) => void;
+}
+
+// Implement loading and error states
+export function TrendCard({ trend, onGenerateAngles }: TrendCardProps) {
+  // Component logic
+}
+```
+
+## Database Schema Patterns
+- Use UUID primary keys
+- Include created_at, updated_at timestamps
+- Implement soft deletes where appropriate
+- Use JSONB for flexible data (trend metadata)
+- Index columns used in WHERE/ORDER BY
+
+## Testing Requirements
+- Unit tests for all service methods
+- Integration tests for API endpoints
+- Use pytest with async support
+- Mock external API calls
+- Frontend: Jest + React Testing Library
+- Aim for 80% code coverage
+
+### Python Testing Best Practices
+```python
+# Use pytest fixtures for reusable test data
+@pytest.fixture
+def sample_trend():
+    return Trend(
+        id="test-123",
+        title="White Lotus Season 3",
+        score=85.5,
+        platforms=["twitter", "google"]
+    )
+
+# Test both success and failure cases
+async def test_generate_angles_success(sample_trend):
+    angles = await generate_angles(sample_trend)
+    assert len(angles) > 0
+    assert all(isinstance(a, CampaignAngle) for a in angles)
+
+async def test_generate_angles_handles_api_failure(sample_trend, mocker):
+    mocker.patch('app.services.ai_service.generate', side_effect=APIError)
+    angles = await generate_angles(sample_trend)
+    assert len(angles) > 0  # Should fall back to templates
+```
+
+## Security Considerations
+- Validate all inputs (Pydantic/Zod)
+- Rate limit API endpoints
+- Implement API key authentication
+- Store secrets in environment variables
+- Use parameterized queries (no SQL injection)
+- Implement CORS properly
+
+## Performance Optimization
+- Cache analyzed trends for 24 hours in Redis
+- Use database connection pooling
+- Implement request debouncing on frontend
+- Lazy load components
+- Use React.memo for expensive components
+- Batch API requests to external services
+- Run heavy analysis during off-peak hours
+
+## AI Integration Guidelines
+```python
+# Use LangChain for AI workflows
+from langchain import LLMChain, PromptTemplate
+
+# Always implement fallbacks
+async def generate_angles(trend: Trend) -> List[CampaignAngle]:
+    try:
+        # Primary AI generation
+        angles = await ai_service.generate(trend)
+    except Exception as e:
+        # Fallback to template-based generation
+        angles = await template_service.generate(trend)
+    return angles
+```
+
+## Error Handling
+- Log errors with context (use structlog)
+- Return user-friendly error messages
+- Implement retry logic for external APIs
+- Use circuit breakers for unreliable services
+- Monitor error rates and alert on anomalies
+
+## Monitoring & Observability
+- Log all external API calls
+- Track daily trend analysis completion
+- Monitor angle generation success rate
+- Use Prometheus metrics
+- Implement health check endpoints
+- Track trends that convert to actual campaigns
+
+## Development Workflow
+1. Create feature branch from main
+2. Write tests first (TDD encouraged)
+3. Implement feature
+4. Run linters (Black, ESLint)
+5. Ensure all tests pass
+6. Update documentation
+7. Create pull request
+
+## Common Commands
+```bash
+# Backend
+cd backend
+pip install -r requirements-dev.txt
+pytest
+black app/
+uvicorn app.main:app --reload
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+npm run lint
+npm run test
+
+# Full stack
+docker-compose up
+```
+
+## Environment Variables
+Always use .env files for configuration:
+- DATABASE_URL
+- REDIS_URL
+- OPENAI_API_KEY
+- NEWS_API_KEY
+- TWITTER_API_KEY
+- etc.
+
+## When Implementing New Features
+1. Start with the data model (Pydantic/TypeScript interfaces)
+2. Create database migrations if needed
+3. Implement service layer logic
+4. Add API endpoints
+5. Create frontend components
+6. Add tests at each layer
+7. Update API documentation
+
+## Debugging Tips
+- Use FastAPI's interactive docs (/docs)
+- Enable SQL query logging in development
+- Use React DevTools
+- Monitor Redis with redis-cli
+- Check Celery task status in Flower
+
+## Remember
+- This is a daily analysis system - optimize for thoroughness over speed
+- Trends should have staying power (multiple days) to be worth a PR campaign
+- Campaign execution takes days - provide comprehensive briefs
+- Brand safety is critical - validate all generated content
+- The system should be resilient to API failures
+- Focus on actionable insights with realistic execution timelines
