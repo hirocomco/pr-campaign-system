@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   prcs_db:
     image: postgres:15
@@ -98,6 +96,8 @@ services:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system
       - TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system_test
       - REDIS_URL=redis://prcs_redis:6379
+      - CELERY_BROKER_URL=redis://prcs_redis:6379
+      - CELERY_RESULT_BACKEND=redis://prcs_redis:6379
       - ELASTICSEARCH_URL=http://prcs_elasticsearch:9200
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -123,6 +123,8 @@ services:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system
       - TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system_test
       - REDIS_URL=redis://prcs_redis:6379
+      - CELERY_BROKER_URL=redis://prcs_redis:6379
+      - CELERY_RESULT_BACKEND=redis://prcs_redis:6379
       - ELASTICSEARCH_URL=http://prcs_elasticsearch:9200
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}

@@ -3,7 +3,8 @@ Configuration settings for the PR Campaign Ideation System.
 """
 
 from typing import List, Optional, Union
-from pydantic import AnyHttpUrl, BaseSettings, validator
+from pydantic import AnyHttpUrl, field_validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -31,7 +32,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000"
     ]
     
-    @validator("CORS_ORIGINS", pre=True)
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
@@ -114,7 +116,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     LOG_LEVEL: str = "INFO"
     
-    @validator("VALID_API_KEYS", pre=True)
+    @field_validator("VALID_API_KEYS", mode="before")
+    @classmethod
     def assemble_api_keys(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str) and v:
             return [i.strip() for i in v.split(",")]
@@ -122,7 +125,8 @@ class Settings(BaseSettings):
             return v
         return []
     
-    @validator("DIGEST_RECIPIENTS", pre=True)
+    @field_validator("DIGEST_RECIPIENTS", mode="before")
+    @classmethod
     def assemble_digest_recipients(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str) and v:
             return [i.strip() for i in v.split(",")]
@@ -130,9 +134,10 @@ class Settings(BaseSettings):
             return v
         return []
     
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    model_config = {
+        "case_sensitive": True,
+        "env_file": ".env"
+    }
 
 
 settings = Settings() 

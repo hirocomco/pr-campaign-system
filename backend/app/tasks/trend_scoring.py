@@ -8,7 +8,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .celery_app import celery_app
-from ..core.database import get_session
+from ..core.database import get_db_session
 from ..models.trend import Trend
 from ..services.data_enrichment.enrichment_service import DataEnrichmentService
 
@@ -39,7 +39,7 @@ async def _run_advanced_scoring(trend_ids: List[str] = None) -> Dict[str, Any]:
         Analysis results
     """
     try:
-        async with get_session() as session:
+        async with get_db_session() as session:
             # Get trends to analyze
             if trend_ids:
                 query = select(Trend).where(Trend.id.in_(trend_ids))
@@ -152,7 +152,7 @@ async def _calculate_pr_potential(trend: Trend) -> float:
     """
     try:
         score = 0.0
-        metadata = trend.metadata or {}
+        metadata = trend.trend_metadata or {}
         
         # News coverage factor (30% weight)
         news_articles = metadata.get("related_news", [])
@@ -203,7 +203,7 @@ async def _calculate_virality_potential(trend: Trend) -> float:
     """
     try:
         score = 0.0
-        metadata = trend.metadata or {}
+        metadata = trend.trend_metadata or {}
         
         # Engagement velocity (40% weight)
         search_data = metadata.get("search_volume", {})
@@ -263,7 +263,7 @@ async def _calculate_brand_safety_score(trend: Trend) -> float:
     """
     try:
         score = 100.0  # Start with perfect safety
-        metadata = trend.metadata or {}
+        metadata = trend.trend_metadata or {}
         
         # Check for risk factors
         sentiment_data = metadata.get("sentiment_analysis", {})
@@ -363,7 +363,7 @@ def trend_decay_analysis():
 async def _run_decay_analysis() -> Dict[str, Any]:
     """Run trend decay analysis to identify declining trends."""
     try:
-        async with get_session() as session:
+        async with get_db_session() as session:
             # Get trends older than 3 days
             cutoff_time = datetime.utcnow() - timedelta(days=3)
             query = select(Trend).where(Trend.created_at < cutoff_time)

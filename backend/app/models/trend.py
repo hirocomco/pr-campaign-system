@@ -41,7 +41,7 @@ class Trend(Base):
     keywords = Column(ARRAY(String), nullable=True, default=list)
     
     # Metadata and analysis results
-    metadata = Column(JSONB, nullable=True, default=dict)  # Flexible storage for additional data
+    trend_metadata = Column(JSONB, nullable=True, default=dict)  # Flexible storage for additional data
     analysis_data = Column(JSONB, nullable=True, default=dict)  # AI analysis results
     
     # Geographic data

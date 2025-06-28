@@ -12,7 +12,7 @@ from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .celery_app import celery_app
-from ..core.database import get_session
+from ..core.database import get_db_session
 from ..core.config import settings
 from ..models.trend import Trend
 from ..models.campaign import Campaign
@@ -135,7 +135,7 @@ async def _generate_and_send_digest(recipient_emails: List[str] = None) -> Dict[
         Send results summary
     """
     try:
-        async with get_session() as session:
+        async with get_db_session() as session:
             # Gather digest data
             digest_data = await _gather_digest_data(session)
             
@@ -375,7 +375,7 @@ def send_weekly_summary():
 async def _send_weekly_summary() -> Dict[str, Any]:
     """Generate and send weekly summary email."""
     try:
-        async with get_session() as session:
+        async with get_db_session() as session:
             # Get last week's data
             week_ago = datetime.utcnow() - timedelta(days=7)
             

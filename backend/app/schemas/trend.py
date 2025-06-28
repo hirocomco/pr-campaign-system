@@ -54,7 +54,7 @@ class TrendUpdate(BaseModel):
     source_urls: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
     analysis_data: Optional[Dict[str, Any]] = None
-    status: Optional[str] = Field(None, regex="^(active|archived|expired)$")
+    status: Optional[str] = Field(None, pattern="^(active|archived|expired)$")
     is_analyzed: Optional[bool] = None
     is_brand_safe: Optional[bool] = None
 
