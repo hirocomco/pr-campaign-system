@@ -5,7 +5,7 @@ services:
     image: postgres:15
     restart: always
     environment:
-      POSTGRES_DB: pr_campaign_db
+      POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -64,12 +64,16 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pr_campaign_db
-      - REDIS_URL=redis://redis:6379
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system
+      - TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system_test
+      - REDIS_URL=redis://prcs_redis:6379
+      - ELASTICSEARCH_URL=http://prcs_elasticsearch:9200
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - NEWS_API_KEY=${NEWS_API_KEY}
-      - TWITTER_API_KEY=${TWITTER_API_KEY}
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID}
+      - REDDIT_CLIENT_SECRET=${REDDIT_CLIENT_SECRET}
       - ENVIRONMENT=development
     ports:
       - "8000:8000"
@@ -77,11 +81,11 @@ services:
       - ./backend:/app
       - /app/__pycache__
     depends_on:
-      db:
+      prcs_db:
         condition: service_healthy
-      redis:
+      prcs_redis:
         condition: service_healthy
-      elasticsearch:
+      prcs_elasticsearch:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
@@ -91,19 +95,23 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pr_campaign_db
-      - REDIS_URL=redis://redis:6379
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system
+      - TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system_test
+      - REDIS_URL=redis://prcs_redis:6379
+      - ELASTICSEARCH_URL=http://prcs_elasticsearch:9200
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - NEWS_API_KEY=${NEWS_API_KEY}
-      - TWITTER_API_KEY=${TWITTER_API_KEY}
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID}
+      - REDDIT_CLIENT_SECRET=${REDDIT_CLIENT_SECRET}
       - ENVIRONMENT=development
     volumes:
       - ./backend:/app
     depends_on:
-      - db
-      - redis
-      - backend
+      - prcs_db
+      - prcs_redis
+      - prcs_backend
     command: celery -A app.tasks.celery_app worker --loglevel=info
 
   prcs_celery_beat:
@@ -112,19 +120,23 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pr_campaign_db
-      - REDIS_URL=redis://redis:6379
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system
+      - TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@prcs_db:5432/pr_campaign_system_test
+      - REDIS_URL=redis://prcs_redis:6379
+      - ELASTICSEARCH_URL=http://prcs_elasticsearch:9200
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - NEWS_API_KEY=${NEWS_API_KEY}
-      - TWITTER_API_KEY=${TWITTER_API_KEY}
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID}
+      - REDDIT_CLIENT_SECRET=${REDDIT_CLIENT_SECRET}
       - ENVIRONMENT=development
     volumes:
       - ./backend:/app
     depends_on:
-      - db
-      - redis
-      - backend
+      - prcs_db
+      - prcs_redis
+      - prcs_backend
     command: celery -A app.tasks.celery_app beat --loglevel=info
 
   prcs_frontend:
@@ -142,7 +154,7 @@ services:
       - /app/node_modules
       - /app/.next
     depends_on:
-      - backend
+      - prcs_backend
     command: npm run dev
 
 volumes:
