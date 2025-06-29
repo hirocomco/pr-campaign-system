@@ -1,7 +1,8 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { TrendingUp, Zap, BarChart3, Users } from 'lucide-react'
+import { TrendingUp, Zap, BarChart3, Users, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Dashboard() {
   const { data: dashboardData, isLoading } = useQuery({
@@ -100,18 +101,23 @@ export default function Dashboard() {
             <h2 className="text-xl font-semibold text-foreground mb-4">Top Trends</h2>
             <div className="space-y-4">
               {dashboardData?.trends?.top_trends?.slice(0, 5).map((trend: any) => (
-                <div key={trend.id} className="flex items-center justify-between p-3 bg-muted/50 rounded">
-                  <div>
-                    <p className="font-medium text-foreground">{trend.title}</p>
-                    <p className="text-sm text-muted-foreground">{trend.category}</p>
+                <Link key={trend.id} href={`/trends/${trend.id}`}>
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded hover:bg-muted cursor-pointer transition-colors">
+                    <div>
+                      <p className="font-medium text-foreground hover:text-primary">{trend.title}</p>
+                      <p className="text-sm text-muted-foreground">{trend.category}</p>
+                    </div>
+                    <div className="text-right flex items-center gap-2">
+                      <div>
+                        <p className="font-semibold text-primary">{(trend.score * 100).toFixed(0)}%</p>
+                        <p className="text-xs text-muted-foreground">
+                          {trend.platforms?.join(', ')}
+                        </p>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-primary">{(trend.score * 100).toFixed(0)}%</p>
-                    <p className="text-xs text-muted-foreground">
-                      {trend.platforms?.join(', ')}
-                    </p>
-                  </div>
-                </div>
+                </Link>
               )) || (
                 <p className="text-muted-foreground">No trends available</p>
               )}

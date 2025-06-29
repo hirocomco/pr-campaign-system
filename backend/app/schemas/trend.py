@@ -68,7 +68,7 @@ class TrendResponse(TrendBase):
     sentiment_score: Optional[float]
     sustainability_score: float
     source_urls: List[str]
-    metadata: Dict[str, Any]
+    metadata: Dict[str, Any] = Field(alias="trend_metadata")
     analysis_data: Dict[str, Any]
     status: str
     is_analyzed: bool

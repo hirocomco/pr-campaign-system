@@ -52,7 +52,7 @@ if settings.CORS_ORIGINS:
 # Add trusted host middleware
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0"]
+    allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0", "prcs_backend", "*"]
 )
 
 # Include API router

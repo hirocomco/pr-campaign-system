@@ -56,6 +56,92 @@ class Settings(BaseSettings):
     REDDIT_CLIENT_ID: Optional[str] = None
     REDDIT_CLIENT_SECRET: Optional[str] = None
     REDDIT_USER_AGENT: str = "pr-campaign-system/1.0"
+    REDDIT_SUBREDDITS: List[str] = ["all", "news", "worldnews", "technology", "entertainment", "business", "science"]
+    REDDIT_POSTS_PER_SUBREDDIT: int = 5
+    REDDIT_TRENDING_ALGORITHM: str = "hot"  # hot, top, rising, new
+    
+    # Content Categorization Configuration
+    AI_CATEGORIZATION_ENABLED: bool = True
+    FALLBACK_TO_KEYWORD_FILTER: bool = True  # Fallback if AI categorization fails
+    
+    # AI Categorization Settings
+    AI_CATEGORIZATION_MIN_CONFIDENCE: float = 0.7  # Minimum confidence for AI decisions
+    AI_CATEGORIZATION_TIMEOUT: int = 30  # Seconds to wait for AI response
+    ALLOW_CAUTION_CONTENT: bool = True  # Allow content marked as CAUTION level
+    
+    # AI Categorization Prompts
+    AI_CATEGORIZATION_SYSTEM_PROMPT: str = "You are an expert content safety analyst for brand marketing. Analyze content and respond with valid JSON only."
+    
+    AI_CATEGORIZATION_USER_PROMPT_TEMPLATE: str = """
+Analyze this Reddit content for brand safety and categorization:
+
+CONTENT TO ANALYZE:
+Title: {title}
+Description: {description}
+Subreddit: r/{subreddit}
+Metadata: {metadata_signals}
+
+CATEGORIZATION TASK:
+Categorize this content for brand safety with these levels:
+- SAFE: Brand-safe, suitable for PR campaigns (technology, science, entertainment, lifestyle)
+- CAUTION: Potentially sensitive but not necessarily unsafe (health topics, minor controversies)  
+- POLITICAL: Political content that brands should avoid
+- VIOLENT: Violence, crime, war content
+- CONTROVERSIAL: Highly divisive topics
+- NSFW: Adult/inappropriate content
+
+ANALYSIS CRITERIA:
+1. Context and nuance matter - look beyond keywords
+2. Consider if a major brand would associate with this content
+3. Assess potential for backlash or controversy
+4. Science, technology, entertainment are typically safe
+5. News can be safe unless political/violent
+6. Personal stories and advice are often safe
+
+REQUIRED RESPONSE FORMAT (JSON):
+{{
+    "safety_level": "SAFE|CAUTION|POLITICAL|VIOLENT|CONTROVERSIAL|NSFW",
+    "confidence": 0.85,
+    "primary_category": "technology|science|entertainment|news|lifestyle|politics|violence|controversy",
+    "secondary_categories": ["specific", "subcategories"],
+    "reasoning": "Brief explanation of the categorization decision",
+    "pr_suitability": "Brief assessment of PR campaign suitability"
+}}
+
+Respond only with valid JSON.
+"""
+    
+    # Blocked Subreddits and Content (configurable lists)
+    BLOCKED_SUBREDDITS: List[str] = [
+        "politics", "worldpolitics", "conservative", "liberal", 
+        "the_donald", "sandersforpresident", "politicalhumor",
+        "combatfootage", "ukraine", "russia", "war", "syriancivilwar",
+        "watchpeopledie", "gore", "nsfw", "nsfw_gifs"
+    ]
+    
+    BLOCKED_FLAIRS: List[str] = [
+        "nsfw", "politics", "violence", "gore", "war", "breaking news"
+    ]
+    
+    # Legacy Content Filtering (fallback only)
+    CONTENT_FILTER_ENABLED: bool = False  # Deprecated in favor of AI categorization
+    CONTENT_FILTER_WAR_KEYWORDS: List[str] = [
+        "war", "battle", "conflict", "invasion", "bombing", "attack", "military", "combat",
+        "weapon", "soldier", "army", "navy", "airforce", "missile", "bomb", "drone", "strike",
+        "siege", "battlefield", "casualties", "killed", "dead", "wounded", "fatalities"
+    ]
+    CONTENT_FILTER_POLITICS_KEYWORDS: List[str] = [
+        "election", "vote", "candidate", "republican", "democrat", "congress",
+        "senate", "president", "minister", "parliament", "political", "politician",
+        "debate", "policy", "legislation", "government", "administration", "conservative",
+        "liberal", "progressive", "ballot", "primary", "poll", "voter"
+    ]
+    CONTENT_FILTER_VIOLENCE_KEYWORDS: List[str] = [
+        "murder", "kill", "death", "shot", "shooting", "stabbed", "assault", "violence",
+        "fight", "brawl", "riot", "protest", "clash", "terror", "terrorist", "explosion",
+        "victim", "crime", "criminal", "gang", "drugs", "arrest", "police", "shooting",
+        "hate", "racism", "discrimination", "abuse", "harassment", "threat"
+    ]
     
     # Security
     VALID_API_KEYS: List[str] = []
@@ -132,6 +218,60 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",")]
         elif isinstance(v, list):
             return v
+        return []
+    
+    @field_validator("REDDIT_SUBREDDITS", mode="before")
+    @classmethod
+    def assemble_reddit_subreddits(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and v:
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, list):
+            return v
+        return ["all", "news", "worldnews", "technology", "entertainment"]
+    
+    @field_validator("CONTENT_FILTER_WAR_KEYWORDS", mode="before")
+    @classmethod
+    def assemble_war_keywords(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and v:
+            return [i.strip().lower() for i in v.split(",")]
+        elif isinstance(v, list):
+            return [kw.lower() for kw in v]
+        return []
+    
+    @field_validator("CONTENT_FILTER_POLITICS_KEYWORDS", mode="before")
+    @classmethod
+    def assemble_politics_keywords(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and v:
+            return [i.strip().lower() for i in v.split(",")]
+        elif isinstance(v, list):
+            return [kw.lower() for kw in v]
+        return []
+    
+    @field_validator("CONTENT_FILTER_VIOLENCE_KEYWORDS", mode="before")
+    @classmethod
+    def assemble_violence_keywords(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and v:
+            return [i.strip().lower() for i in v.split(",")]
+        elif isinstance(v, list):
+            return [kw.lower() for kw in v]
+        return []
+    
+    @field_validator("BLOCKED_SUBREDDITS", mode="before")
+    @classmethod
+    def assemble_blocked_subreddits(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and v:
+            return [i.strip().lower() for i in v.split(",")]
+        elif isinstance(v, list):
+            return [s.lower() for s in v]
+        return []
+    
+    @field_validator("BLOCKED_FLAIRS", mode="before")
+    @classmethod
+    def assemble_blocked_flairs(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and v:
+            return [i.strip().lower() for i in v.split(",")]
+        elif isinstance(v, list):
+            return [s.lower() for s in v]
         return []
     
     model_config = {
